@@ -4,10 +4,14 @@
 
 { config, lib, pkgs, ... }:
 
+let
+    home-manager = builtins.fetchTarball https://github.com/nix-community/home-manager/archive/master.tar.gz;
+in
 {
   imports =
     [ # Include the results of the hardware scan.
       ./hardware-configuration.nix
+      (import "${home-manager}/nixos")
     ];
 
   # Use the systemd-boot EFI boot loader.
@@ -17,7 +21,7 @@
   # Use latest kernel.
   boot.kernelPackages = pkgs.linuxPackages_latest;
 
-  networking.hostName = "nixos"; # Define your hostname.
+  networking.hostName = "chromasen-nix"; # Define your hostname.
   # Pick only one of the below networking options.
   # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
   networking.networkmanager.enable = true;  # Easiest to use and most distros use this by default.
@@ -37,11 +41,7 @@
   #   useXkbConfig = true; # use xkb.options in tty.
   # };
 
-  # Enable the X11 windowing system.
-  services.xserver = {
-    enable = true;
-    windowManager.qtile.enable = true;
-  };
+  # Enable the X11 windowing system
   
   programs.fish.enable = true;  
   users.defaultUserShell = pkgs.fish;
@@ -51,7 +51,7 @@
   # services.xserver.xkb.options = "eurosign:e,caps:escape";
 
   # Enable CUPS to print documents.
-  # services.printing.enable = true;
+  services.printing.enable = true;
 
   # Enable sound.
   # services.pulseaudio.enable = true;
@@ -80,6 +80,64 @@
       github-desktop
       tree
     ];
+  };
+
+  services.xserver = {
+    enable = true;
+    videoDrivers = ["nvidia"];
+  };
+
+  services = { 
+    displayManager.gdm = {
+      enable = true;
+      wayland = true;
+    };
+  };
+
+  hardware = {
+    graphics.enable = true;
+    nvidia.open = false;
+    nvidia.modesetting.enable = true;
+  };
+
+  home-manager.backupFileExtension = "bkp";  
+  home-manager.users.tormented = { pkgs, ...}: {
+    home.packages = with pkgs; [
+    	xfce.thunar
+        xarchiver
+        starship
+        fish
+        fastfetch
+        rofi
+        alacritty
+	kitty   
+    ];
+    home.stateVersion = "25.05";
+    programs.fish = {
+    	enable = true;
+    	shellInit = ''
+    	    source (starship init fish --print-full-init | psub)
+    	'';
+    	interactiveShellInit = ''
+    	    set fish_greeting
+    	    fastfetch
+    	'';
+    	shellAbbrs = {
+    	    nix-update = "sudo nixos-rebuild switch";
+    	};
+    };
+    
+    programs.alacritty = {
+    	enable = true;
+    	settings = {
+    	    terminal.shell = {
+    	        program = "fish";
+    	    };
+    	};
+    };
+    
+    wayland.windowManager.hyprland.enable = true;
+    home.sessionVariables.NIXOS_OZONE_WL = "1";
   };
 
   programs.firefox.enable = false;
