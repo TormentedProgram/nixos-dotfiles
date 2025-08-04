@@ -28,27 +28,9 @@ in
 
   # Set your time zone.
   time.timeZone = "Australia/Sydney";
-
-  # Configure network proxy if necessary
-  # networking.proxy.default = "http://user:password@proxy:port/";
-  # networking.proxy.noProxy = "127.0.0.1,localhost,internal.domain";
-
-  # Select internationalisation properties.
-  # i18n.defaultLocale = "en_US.UTF-8";
-  # console = {
-  #   font = "Lat2-Terminus16";
-  #   keyMap = "us";
-  #   useXkbConfig = true; # use xkb.options in tty.
-  # };
-
-  # Enable the X11 windowing system
   
   programs.fish.enable = true;  
   users.defaultUserShell = pkgs.fish;
-
-  # Configure keymap in X11
-  # services.xserver.xkb.layout = "us";
-  # services.xserver.xkb.options = "eurosign:e,caps:escape";
 
   # Enable CUPS to print documents.
   services.printing.enable = true;
@@ -87,13 +69,6 @@ in
     videoDrivers = ["nvidia"];
   };
 
-  services = { 
-    displayManager.gdm = {
-      enable = true;
-      wayland = true;
-    };
-  };
-
   hardware = {
     graphics.enable = true;
     nvidia.open = false;
@@ -103,16 +78,18 @@ in
   home-manager.backupFileExtension = "bkp";  
   home-manager.users.tormented = { pkgs, ...}: {
     home.packages = with pkgs; [
-    	xfce.thunar
+    	  xfce.thunar
         xarchiver
         starship
         fish
         fastfetch
-        rofi
+        wofi
         alacritty
-	kitty   
+        librewolf
+        waybar
     ];
     home.stateVersion = "25.05";
+
     programs.fish = {
     	enable = true;
     	shellInit = ''
@@ -126,6 +103,11 @@ in
     	    nix-update = "sudo nixos-rebuild switch";
     	};
     };
+
+    programs.hyprland = {
+      enable = true;
+      withUWSM = true; # recommended for most users
+    };
     
     programs.alacritty = {
     	enable = true;
@@ -136,43 +118,59 @@ in
     	};
     };
     
-    wayland.windowManager.hyprland.enable = true;
+    wayland.windowManager.hyprland = {
+      enable = true;
+      systemd.enable = true;
+      xwayland.enable = true;
+      settings = {
+        "$mod" = "SUPER";
+        "$term" = "alacritty";
+        "$browser" = "librewolf";
+        "$discord" = "equibop";
+
+        bind = [
+          # mouse movements
+          "$mod, mouse:272, movewindow"
+          "$mod, mouse:273, resizewindow"
+          "$mod ALT, mouse:272, resizewindow"
+
+          # keybinds
+          "$mod, Q, exec, $term"
+          "$mod, F, exec, $browser"
+          "$mod, D, exec, $discord"
+          "$mod, C, killactive"
+        ]
+        ++ (
+          # workspaces
+          # binds $mod + [shift +] {1..9} to [move to] workspace {1..9}
+          builtins.concatLists (builtins.genList (i:
+              let ws = i + 1;
+              in [
+                "$mod, code:1${toString i}, workspace, ${toString ws}"
+                "$mod SHIFT, code:1${toString i}, movetoworkspace, ${toString ws}"
+              ]
+            )
+            9)
+        );
+      };
+    };
+
     home.sessionVariables.NIXOS_OZONE_WL = "1";
   };
-
-  programs.firefox.enable = false;
   
   # List packages installed in system profile.
   # You can use https://search.nixos.org/ to find more packages (and options).
   environment.systemPackages = with pkgs; [
     gedit
-    librewolf
     wget
+    git
   ];
-
-  # Some programs need SUID wrappers, can be configured further or are
-  # started in user sessions.
-  # programs.mtr.enable = true;
-  # programs.gnupg.agent = {
-  #   enable = true;
-  #   enableSSHSupport = true;
-  # };
-
-  # List services that you want to enable:
-
-  # Enable the OpenSSH daemon.
-  # services.openssh.enable = true;
 
   # Open ports in the firewall.
   # networking.firewall.allowedTCPPorts = [ ... ];
   # networking.firewall.allowedUDPPorts = [ ... ];
   # Or disable the firewall altogether.
   # networking.firewall.enable = false;
-
-  # Copy the NixOS configuration file and link it from the resulting system
-  # (/run/current-system/configuration.nix). This is useful in case you
-  # accidentally delete configuration.nix.
-  # system.copySystemConfiguration = true;
 
   # This option defines the first version of NixOS you have installed on this particular machine,
   # and is used to maintain compatibility with application data (e.g. databases) created on older NixOS versions.
