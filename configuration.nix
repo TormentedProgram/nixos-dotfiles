@@ -136,6 +136,7 @@ in
         "$term" = "alacritty";
         "$browser" = "librewolf";
         "$discord" = "equibop";
+        "$filemanager" = "thunar";
 
         bind = [
           # mouse movements
@@ -147,6 +148,7 @@ in
           "$mod, Q, exec, $term"
           "$mod, F, exec, $browser"
           "$mod, D, exec, $discord"
+          "$mod, E, exec, $filemanager"
           "$mod, C, killactive"
         ]
         ++ (
