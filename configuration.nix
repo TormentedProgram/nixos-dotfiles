@@ -48,6 +48,11 @@ in
   # Enable touchpad support (enabled default in most desktopManager).
   services.libinput.enable = true;
 
+  programs.hyprland = {
+    enable = true;
+    withUWSM = true; # recommended for most users
+  };
+
   # Define a user account. Don't forget to set a password with ‘passwd’.
   users.users.tormented = {
     isNormalUser = true;
@@ -104,11 +109,6 @@ in
     	};
     };
 
-    programs.hyprland = {
-      enable = true;
-      withUWSM = true; # recommended for most users
-    };
-    
     programs.alacritty = {
     	enable = true;
     	settings = {
