@@ -164,6 +164,7 @@ in
     gedit
     wget
     git
+    wl-clipboard
   ];
 
   # Open ports in the firewall.
