@@ -14,6 +14,10 @@ in
       (import "${home-manager}/nixos")
     ];
 
+  nix.settings = {
+    download-buffer-size = 524288000; # 500 MiB
+  };
+
   # Use the systemd-boot EFI boot loader.
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
