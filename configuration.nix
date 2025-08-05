@@ -57,6 +57,8 @@ in
     withUWSM = true; # recommended for most users
   };
 
+  services.gvfs.enable = true;
+
   # Define a user account. Don't forget to set a password with ‘passwd’.
   users.users.tormented = {
     isNormalUser = true;
@@ -68,6 +70,8 @@ in
       steam
       protonup-qt
       lutris
+      xfce.tumbler
+      ffmpegthumbnailer
       github-desktop
       tree
     ];
@@ -164,6 +168,7 @@ in
     gedit
     wget
     git
+    gvfs
     wl-clipboard
   ];
 
