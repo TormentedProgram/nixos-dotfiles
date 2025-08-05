@@ -99,6 +99,7 @@ in
         rofi-wayland
         alacritty
         librewolf
+        yt-dlp
         waybar
     ];
     home.stateVersion = "25.05";
@@ -173,6 +174,8 @@ in
     wget
     git
     gvfs
+    swww
+    ffmpeg
     wl-clipboard
   ];
 
