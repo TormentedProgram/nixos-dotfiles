@@ -82,7 +82,8 @@ in
   home-manager.backupFileExtension = "bkp";  
   home-manager.users.tormented = { pkgs, ...}: {
     home.packages = with pkgs; [
-    	  xfce.thunar
+    	xfce.thunar
+        thunderbird
         xarchiver
         starship
         fish
