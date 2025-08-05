@@ -88,7 +88,7 @@ in
         starship
         fish
         fastfetch
-        wofi
+        rofi-wayland
         alacritty
         librewolf
         waybar
