@@ -177,6 +177,7 @@ in
     swww
     ffmpeg
     wl-clipboard
+    grimblast
   ];
 
   # Open ports in the firewall.
