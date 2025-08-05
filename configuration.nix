@@ -61,7 +61,7 @@ in
   users.users.tormented = {
     isNormalUser = true;
     shell = pkgs.fish;
-    extraGroups = [ "wheel" ]; # Enable ‘sudo’ for the user.
+    extraGroups = [ "wheel" "networkmanager" ]; # Enable ‘sudo’ for the user.
     packages = with pkgs; [
       equibop
       vscodium
