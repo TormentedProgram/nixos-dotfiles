@@ -2,7 +2,7 @@
 # your system. Help is available in the configuration.nix(5) man page, on
 # https://search.nixos.org/options and in the NixOS manual (`nixos-help`).
 
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, username, services, ... }:
 
 let
     home-manager = builtins.fetchTarball https://github.com/nix-community/home-manager/archive/master.tar.gz;
@@ -48,12 +48,12 @@ in
   users.defaultUserShell = pkgs.fish;
 
   # Enable CUPS to print documents.
-  services.printing.enable = true;
+  printing.enable = true;
 
   # Enable sound.
   # services.pulseaudio.enable = true;
   # OR
-  services.pipewire = {
+  pipewire = {
     enable = true;
     pulse.enable = true;
   };
@@ -61,16 +61,26 @@ in
   nixpkgs.config.allowUnfree = true;
 
   # Enable touchpad support (enabled default in most desktopManager).
-  services.libinput.enable = true;
+  libinput.enable = true;
 
   programs.hyprland = {
     enable = true;
     withUWSM = true; # recommended for most users
   };
 
-  services.gvfs.enable = true;
+  gvfs.enable = true;
   programs.thunar = {
     enable = true;
+  };
+
+  greetd = {
+    enable = true;
+    settings = {
+      default_session = {
+        user = username;
+        command = "${pkgs.greetd.tuigreet}/bin/tuigreet --time --cmd Hyprland"; # start Hyprland with a TUI login manager
+      };
+    };
   };
 
   # Define a user account. Don't forget to set a password with ‘passwd’.
@@ -92,12 +102,27 @@ in
   };
 
   hardware = {
-    graphics.enable = true;
+    graphics = {
+      enable = true;
+      enable32Bit = true;
+      extraPackages = with pkgs; [
+        vaapiVdpau
+        libvdpau
+        libvdpau-va-gl 
+        nvidia-vaapi-driver
+        vdpauinfo
+        libva
+        libva-utils	
+        intel-media-driver
+      ];
+  	};
+
     nvidia = {
-      package = config.boot.kernelPackages.nvidiaPackages.stable;
+      package = config.boot.kernelPackages.nvidiaPackages.latest;
       open = false;
       modesetting.enable = true;
-      powerManagement.enable = true;
+      nvidiaSettings = true;
+      nvidiaPersistenced = false;
     };
   };
 
@@ -152,7 +177,12 @@ in
         "$discord" = "equibop";
         "$filemanager" = "thunar";
 
+        exec-once = [
+          "waybar"
+        ];
+
         monitor = [
+          "Virtual-1, 2560x1440@240,0x0,1.6"
           "DP-1, 2560x1440@240,0x0,1.6"
           "HDMI-A-2, 1920x1080@144,1600x0,1.2"
         ];
@@ -201,6 +231,7 @@ in
     ffmpeg
     wl-clipboard
     grimblast
+    greetd
   ];
 
   # Open ports in the firewall.
@@ -227,12 +258,5 @@ in
   #
   # For more information, see `man configuration.nix` or https://nixos.org/manual/nixos/stable/options#opt-system.stateVersion .
   system.stateVersion = "25.05"; # Did you read the comment?
-
-  specialisation = {
-    external-display.configuration = {
-      system.nixos.tags = [ "external-display" ];
-      hardware.nvidia.powerManagement.enable = lib.mkForce false;
-    };
-  };
 }
 
