@@ -93,7 +93,6 @@ in
 
   hardware = {
     graphics.enable = true;
-    opengl.enable = true;
     nvidia = {
       package = config.boot.kernelPackages.nvidiaPackages.stable;
       open = false;
