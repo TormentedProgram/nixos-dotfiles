@@ -153,8 +153,8 @@ in
         "$filemanager" = "thunar";
 
         monitor = [
-          "monitor = DP-1, 2560x1440@240,0x0,1.6"
-          "monitor = HDMI-A-2, 1920x1080@144,1600x0,1.2"
+          "DP-1, 2560x1440@240,0x0,1.6"
+          "HDMI-A-2, 1920x1080@144,1600x0,1.2"
         ];
 
         bind = [
