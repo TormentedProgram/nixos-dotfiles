@@ -6,6 +6,13 @@
 
 let
     home-manager = builtins.fetchTarball https://github.com/nix-community/home-manager/archive/master.tar.gz;
+    nvidia-offload = pkgs.writeShellScriptBin "nvidia-offload" ''
+      export __GLX_VENDOR_LIBRARY_NAME=nvidia
+      export LIBVA_DRIVER_NAME,nvidia
+      export __GL_VRR_ALLOWED,1
+      export WLR_DRM_NO_ATOMIC,1
+      exec "$@"
+    '';
 in
 {
   imports =
@@ -27,8 +34,6 @@ in
   boot.kernelPackages = pkgs.linuxPackages_latest;
 
   networking.hostName = "chromasen-nix"; # Define your hostname.
-  # Pick only one of the below networking options.
-  # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
   networking.networkmanager.enable = true;  # Easiest to use and most distros use this by default.
 
   # Set your time zone.
@@ -83,8 +88,13 @@ in
 
   hardware = {
     graphics.enable = true;
-    nvidia.open = false;
-    nvidia.modesetting.enable = true;
+    opengl.enable = true;
+    nvidia = {
+      package = config.boot.kernelPackages.nvidiaPackages.stable;
+      open = false;
+      modesetting.enable = true;
+      powerManagement.enable = true;
+    };
   };
 
   home-manager.backupFileExtension = "bkp";  
@@ -172,6 +182,7 @@ in
   # List packages installed in system profile.
   # You can use https://search.nixos.org/ to find more packages (and options).
   environment.systemPackages = with pkgs; [
+    nvidia-offload
     gedit
     wget
     git
@@ -207,5 +218,11 @@ in
   # For more information, see `man configuration.nix` or https://nixos.org/manual/nixos/stable/options#opt-system.stateVersion .
   system.stateVersion = "25.05"; # Did you read the comment?
 
+  specialisation = {
+    external-display.configuration = {
+      system.nixos.tags = [ "external-display" ];
+      hardware.nvidia.powerManagement.enable = lib.mkForce false;
+    };
+  };
 }
 
