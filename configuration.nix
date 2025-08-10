@@ -30,8 +30,9 @@ in
     enable = true;
     useOSProber = true;
     efiSupport = true;
+    device = "nodev";
   };
-  
+
   boot.loader.efi.canTouchEfiVariables = true;
 
   # Use latest kernel.
