@@ -2,7 +2,7 @@
 # your system. Help is available in the configuration.nix(5) man page, on
 # https://search.nixos.org/options and in the NixOS manual (`nixos-help`).
 
-{ config, lib, pkgs, services, ... }:
+{ config, lib, pkgs, ... }:
 
 let
     home-manager = builtins.fetchTarball https://github.com/nix-community/home-manager/archive/master.tar.gz;
@@ -48,12 +48,12 @@ in
   users.defaultUserShell = pkgs.fish;
 
   # Enable CUPS to print documents.
-  printing.enable = true;
+  services.printing.enable = true;
 
   # Enable sound.
   # services.pulseaudio.enable = true;
   # OR
-  pipewire = {
+  services.pipewire = {
     enable = true;
     pulse.enable = true;
   };
@@ -61,19 +61,19 @@ in
   nixpkgs.config.allowUnfree = true;
 
   # Enable touchpad support (enabled default in most desktopManager).
-  libinput.enable = true;
+  services.libinput.enable = true;
 
   programs.hyprland = {
     enable = true;
     withUWSM = true; # recommended for most users
   };
 
-  gvfs.enable = true;
+  services.gvfs.enable = true;
   programs.thunar = {
     enable = true;
   };
 
-  greetd = {
+  services.greetd = {
     enable = true;
     settings = {
       default_session = {
