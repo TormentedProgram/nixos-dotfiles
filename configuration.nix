@@ -2,7 +2,7 @@
 # your system. Help is available in the configuration.nix(5) man page, on
 # https://search.nixos.org/options and in the NixOS manual (`nixos-help`).
 
-{ config, lib, pkgs, username, services, ... }:
+{ config, lib, pkgs, services, ... }:
 
 let
     home-manager = builtins.fetchTarball https://github.com/nix-community/home-manager/archive/master.tar.gz;
@@ -77,7 +77,7 @@ in
     enable = true;
     settings = {
       default_session = {
-        user = username;
+        user = "greeter";
         command = "${pkgs.greetd.tuigreet}/bin/tuigreet --time --cmd Hyprland"; # start Hyprland with a TUI login manager
       };
     };
