@@ -105,16 +105,6 @@ in
     graphics = {
       enable = true;
       enable32Bit = true;
-      extraPackages = with pkgs; [
-        vaapiVdpau
-        libvdpau
-        libvdpau-va-gl 
-        nvidia-vaapi-driver
-        vdpauinfo
-        libva
-        libva-utils	
-        intel-media-driver
-      ];
   	};
 
     nvidia = {
@@ -232,6 +222,14 @@ in
     wl-clipboard
     grimblast
     greetd
+    vaapiVdpau
+    libvdpau
+    libvdpau-va-gl 
+    nvidia-vaapi-driver
+    vdpauinfo
+    libva
+    libva-utils	
+    intel-media-driver
   ];
 
   # Open ports in the firewall.
