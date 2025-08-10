@@ -155,8 +155,8 @@ in
         bind = [
           # mouse movements
           "$mod, mouse:272, movewindow"
-          "$mod, mouse:273, resizewindow"
-          "$mod ALT, mouse:272, resizewindow"
+          "$mod, mouse:273, resizeactive"
+          "$mod ALT, mouse:272, resizeactive"
 
           # keybinds
           "$mod, Q, exec, $term"
