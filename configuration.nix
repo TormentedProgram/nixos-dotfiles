@@ -26,8 +26,12 @@ in
     experimental-features = [ "nix-command" "flakes" ];
   };
 
-  # Use the systemd-boot EFI boot loader.
-  boot.loader.systemd-boot.enable = true;
+  boot.loader.grub = {
+    enable = true;
+    useOSProber = true;
+    efiSupport = true;
+  };
+  
   boot.loader.efi.canTouchEfiVariables = true;
 
   # Use latest kernel.
