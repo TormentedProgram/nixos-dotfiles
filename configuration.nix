@@ -179,7 +179,8 @@ in
 
         exec-once = [
           "waybar"
-          "swww --img '/home/tormented/wallpaper.png'"
+          "swww-daemon"
+          "swww img '/home/tormented/wallpaper.png'"
         ];
 
         monitor = [
