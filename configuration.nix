@@ -1,0 +1,1367 @@
+# Edit this configuration file to define what should be installed on
+# your system. Help is available in the configuration.nix(5) man page, on
+# https://search.nixos.org/options and in the NixOS manual (`nixos-help`).
+
+{ config, lib, pkgs, ... }:
+
+let
+    home-manager = builtins.fetchTarball https://github.com/nix-community/home-manager/archive/master.tar.gz;
+    hyprmon-workspaces = pkgs.writeShellScriptBin "hyprmon-workspaces" ''
+        monitorresult=$(${pkgs.hyprland}/bin/hyprctl -j monitors | ${pkgs.jq}/bin/jq --raw-output '.[] | select(.focused == true) | .id')
+        result=$(( $monitorresult * 10 + $2 ))
+        ${pkgs.hyprland}/bin/hyprctl dispatch $1 $result
+    '';
+    control-volume = pkgs.writeShellScriptBin "control-volume" ''
+        current_volume=$(wpctl get-volume @DEFAULT_AUDIO_SINK@ | awk '{print $2}')
+        volume_increase=5
+        case "$1" in
+          "+")
+              # Increase volume
+              if (( $(echo "$current_volume < 1.0" | bc -l) )); then
+                  wpctl set-volume @DEFAULT_AUDIO_SINK@ $volume_increase%+
+              else
+                  wpctl set-volume @DEFAULT_AUDIO_SINK@ 100%
+              fi
+              ;;
+          "-")
+              # Decrease volume
+              wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-
+              ;;
+          *)
+              echo "Invalid argument. Use '+' to increase or '-' to decrease volume."
+              exit 1
+              ;;
+        esac
+        percentage=$(wpctl get-volume @DEFAULT_AUDIO_SINK@ | awk '{printf "%.0f", $2 * 100}')%
+        ${pkgs.gsound}/bin/gsound-play --file=$HOME/.system-assets/sounds/volume.ogg
+        dunstify -r 1000 "VOLUME: $percentage"
+    '';
+in
+{
+  imports =
+    [ # Include the results of the hardware scan.
+      /etc/nixos/hardware-configuration.nix
+      (import "${home-manager}/nixos")
+    ];
+
+  nix.settings = {
+    download-buffer-size = 524288000; # 500 MiB
+    experimental-features = [ "nix-command" "flakes" ];
+  };
+
+  programs.virt-manager.enable = true;
+  users.groups.libvirtd.members = ["tormented"];
+  virtualisation.libvirtd.enable = true;
+  virtualisation.spiceUSBRedirection.enable = true;
+
+  virtualisation.virtualbox.host.enable = true;
+  users.extraGroups.vboxusers.members = ["tormented"];
+  virtualisation.virtualbox.host.enableExtensionPack = true;
+
+  boot.kernelParams = [
+    "systemd.mask=systemd-vconsole-setup.service"
+    "systemd.mask=dev-tpmrm0.device" #this is to mask that stupid 1.5 mins systemd bug
+    "nowatchdog" 
+    "modprobe.blacklist=sp5100_tco" #watchdog for AMD
+    "modprobe.blacklist=iTCO_wdt" #watchdog for Intel
+    "nvidia-drm.modeset=1" # Enables kernel modesetting for the proprietary NVIDIA driver.
+    "nouveau.modeset=0" # Disables modesetting for the open-source Nouveau driver, preventing conflicts with proprietary NVIDIA drivers.
+    "kvm.enable_virt_at_load=0"
+  ];
+
+  boot.initrd = { 
+    availableKernelModules = [ "xhci_pci" "ahci" "nvme" "usb_storage" "usbhid" "sd_mod" ];
+    kernelModules = [ ];
+  };
+
+  networking.firewall = {
+    enable = true;
+    
+    /*allowedTCPPorts = [ 
+      25565 #Minecraft Server
+      27036
+    ];
+    allowedUDPPorts = [
+      4380
+    ];
+    allowedUDPPortRanges = [
+      { from = 27015; to = 27050; }
+      { from = 27000; to = 27100; }
+      { from = 27031; to = 27036; }
+    ];
+    allowedTCPPortRanges = [
+      { from = 27015; to = 27050; }
+    ];*/
+  };
+
+  boot.loader.systemd-boot = {
+    enable = true;
+  };
+
+  boot.loader.efi.canTouchEfiVariables = true;
+  
+  # Use Zen kernel.
+  boot.kernelPackages = pkgs.linuxPackages_zen;
+
+  networking = {
+    networkmanager.enable = true;
+    hostName = "chromasen-nix"; # Define your hostname.
+  }; 
+
+  # Set your time zone.
+  i18n.defaultLocale = "en_AU.UTF-8";
+  services.automatic-timezoned.enable = true; #based on IP location
+
+  i18n.extraLocaleSettings = {
+    LC_ADDRESS = "en_AU.UTF-8";
+    LC_IDENTIFICATION = "en_AU.UTF-8";
+    LC_MEASUREMENT = "en_AU.UTF-8";
+    LC_MONETARY = "en_AU.UTF-8";
+    LC_NAME = "en_AU.UTF-8";
+    LC_NUMERIC = "en_AU.UTF-8";
+    LC_PAPER = "en_AU.UTF-8";
+    LC_TELEPHONE = "en_AU.UTF-8";
+    LC_TIME = "en_AU.UTF-8";
+  };
+  
+  programs.fish.enable = true;  
+  users.defaultUserShell = pkgs.fish;
+
+  # Enable CUPS to print documents.
+  services.printing.enable = true;
+
+  # Enable sound.
+  # services.pulseaudio.enable = true;
+  # OR
+  services.pipewire = {
+    enable = true;
+    alsa.enable = true;
+    alsa.support32Bit = true;
+    pulse.enable = true;
+    jack.enable = true;
+  };
+
+  services.blueman.enable = true;
+
+  fonts = {
+    fontDir.enable = true;
+    fontconfig.useEmbeddedBitmaps = true;
+    packages = with pkgs; [
+      noto-fonts
+      fira-code
+      noto-fonts-cjk-sans
+      jetbrains-mono
+      nerd-fonts.iosevka
+      nerd-fonts.jetbrains-mono # unstable
+      nerd-fonts.fira-code # unstable
+      nerd-fonts.fantasque-sans-mono #unstable
+    ];
+  };
+
+  nixpkgs.config.allowUnfreePredicate = pkg:
+    builtins.elem (lib.getName pkg) [
+      "nvidia-x11"
+      "nvidia-settings"
+      "steam"
+      "steam-unwrapped"
+      "rust-rover"
+      "chapterskip"
+      "evafast"
+      "Oracle_VirtualBox_Extension_Pack"
+    ];
+
+  # Enable touchpad support (enabled default in most desktopManager).
+  services.libinput.enable = true;
+
+  programs.hyprland = {
+    enable = true;
+    portalPackage = pkgs.xdg-desktop-portal-hyprland;
+  	xwayland.enable = true;
+    withUWSM = true; # recommended for most users
+  };
+
+  xdg.mime = {
+    enable = true;
+    defaultApplications = {
+      "text/html" = "librewolf.desktop";
+      "x-scheme-handler/http" = "librewolf.desktop";
+      "x-scheme-handler/https" = "librewolf.desktop";
+      "x-scheme-handler/about" = "librewolf.desktop";
+      "x-scheme-handler/unknown" = "librewolf.desktop";
+    };
+  };
+
+  xdg.portal = {
+    enable = true;
+    wlr.enable = false;
+    extraPortals = [
+      pkgs.xdg-desktop-portal-gtk
+    ];
+    configPackages = [
+      pkgs.xdg-desktop-portal-gtk
+      pkgs.xdg-desktop-portal
+    ];
+  };
+
+  programs.xwayland.enable = true;
+
+  programs.xfconf.enable = true;
+  services.gvfs.enable = true;
+  services.tumbler.enable = true; # Thumbnail support for images
+  
+  programs.thunar = {
+    enable = true;
+    
+    plugins = with pkgs.xfce; [
+      thunar-archive-plugin
+      thunar-volman
+    ];
+  };
+
+  services.displayManager.gdm.enable = true;
+  users.users.tormented = {
+    isNormalUser = true;
+    shell = pkgs.fish;
+    extraGroups = [ 
+      "wheel" 
+      "networkmanager"
+      "libvirtd"
+      "scanner"
+      "lp"
+      "video" 
+      "input" 
+      "audio"  
+    ];
+    packages = with pkgs; [
+      equibop
+      vscodium
+      steam
+      libqalculate
+      protonup-qt
+      gsound
+      lutris
+      umu-launcher
+      rustup
+      mcpelauncher-ui-qt
+      jetbrains.rust-rover
+      jetbrains.idea-community-bin
+      nicotine-plus
+      micromamba
+      prismlauncher
+      cava
+      teams-for-linux
+      gittyup
+      vala
+      pinta
+      xfce.tumbler
+      dolphin-emu
+      hueadm
+      xfce.xfce4-settings
+      kdePackages.kdenlive
+      krita
+      ffmpegthumbnailer
+      obs-studio
+      tree
+      feishin
+      navidrome
+    ];
+  };
+  
+  services.xserver.videoDrivers = [ "nvidia" ];
+
+  hardware = {
+    bluetooth = {
+      enable = true;
+      powerOnBoot = true;
+      settings = {
+        General = {
+          Experimental = true; # Show battery charge of Bluetooth devices
+        };
+      };
+    };
+
+    graphics = {
+      enable = true;
+      enable32Bit = true;
+      extraPackages = with pkgs; [
+        vaapiVdpau
+        libvdpau
+        libvdpau-va-gl 
+        nvidia-vaapi-driver
+        vdpauinfo
+        libva
+        libva-utils	
+      ];
+  	};
+
+    nvidia = {
+      package = config.boot.kernelPackages.nvidiaPackages.beta;
+      open = false;
+      modesetting.enable = true;
+      nvidiaSettings = true;
+    };
+  };
+
+  qt = {
+    enable = true;
+    platformTheme = "gnome";
+    style = "adwaita-dark";
+  };
+
+  home-manager.useGlobalPkgs = true;
+  home-manager.backupFileExtension = "bkp";  
+  home-manager.users.tormented = { pkgs, config, ...}: {
+    home.packages = with pkgs; [
+    	xfce.thunar
+      thunderbird
+      xarchiver
+      starship
+      fastfetch
+      rofi-wayland
+      hyprlock
+      dconf
+      alacritty
+      adwaita-icon-theme
+      dunst
+      orchis-theme
+      librewolf
+      yt-dlp
+      vscodium
+      qimgv
+    ];
+    home.stateVersion = "25.05";
+
+    dconf = {
+      enable = true;
+      settings = {
+        "org/gnome/desktop/interface" = {
+          color-scheme = "prefer-dark";
+        };
+        "org/virt-manager/virt-manager/connections" = {
+          autoconnect = ["qemu:///system"];
+          uris = ["qemu:///system"];
+        };
+      };
+    };
+
+    gtk = {
+      enable = true;
+      theme = {
+        name = "Orchis-Dark";
+        package = pkgs.orchis-theme;
+      };
+      iconTheme = {
+        name = "Adwaita";
+        package = pkgs.adwaita-icon-theme;
+      };
+    };
+
+    home.sessionVariables.GTK_THEME = "Orchis-Dark";
+
+    programs.mpv = {
+      enable = true;
+
+      package = (
+        pkgs.mpv-unwrapped.wrapper {
+          scripts = with pkgs.mpvScripts; [
+            uosc
+            sponsorblock-minimal
+            thumbfast
+            memo
+            chapterskip
+            visualizer
+            evafast
+          ];
+
+          mpv = pkgs.mpv-unwrapped.override {
+            waylandSupport = true;
+          };
+        }
+      );
+
+      config = {
+        profile = "high-quality";
+        ytdl-format = "bestvideo+bestaudio";
+        cache-default = 4000000;
+      };
+    };
+
+    programs.fish = {
+    	enable = true;
+    	shellInit = ''
+    	    source (starship init fish --print-full-init | psub)
+    	'';
+    	interactiveShellInit = ''
+    	    set fish_greeting
+    	    fastfetch
+          eval "$(micromamba shell hook --shell fish)"
+    	'';
+    };
+
+    services.hyprshell = {
+      enable = true;
+      systemd.args = "-v";
+      style = ''
+        :root {
+          --border-color: rgba(255, 255, 255, 0.6);
+          --border-color-active: rgba(120, 245, 255, 0.9);
+
+          --bg-color: #2c2e3e;
+          --bg-color-hover: rgba(40, 40, 50, 1);
+
+          --border-radius: 12px;
+          --border-size: 2px;
+          --border-style: solid;
+          --border-style-secondary: dashed;
+
+          --text-color: rgba(245, 245, 245, 1);
+
+          --window-padding: 2px;
+      }
+
+
+      .monitor {
+          background: #2c2e3e;
+          box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.5);
+      }
+
+      .workspace {
+          background: #1A1B26);
+          box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.5);
+      }
+
+      .workspace:hover {
+          box-shadow: inset 0 0 10px rgba(190, 245, 255, 0.7);
+      }
+
+      .workspace.active {
+          box-shadow: inset 0 0 10px rgba(190, 245, 255, 0.7);
+      }
+
+      .client {
+          background: unset;
+          box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.5);
+      }
+
+      .client.active {
+          background: #2c2e3e;
+          box-shadow: inset 0 0 10px rgba(190, 245, 255, 0.7);
+      }
+
+      .client:hover {
+          background: #2c2e3e;
+          box-shadow: inset 0 0 10px rgba(190, 245, 255, 0.7);
+      }
+
+      .client-image {
+      }
+
+
+      .launcher {
+          background: rgba(255, 255, 255, 0.15);
+          box-shadow: inset 0 0 25px rgba(255, 255, 255, 0.5);
+      }
+
+      .launcher-input {
+          background: unset;
+          border-radius: 10px;
+          background: rgba(255, 255, 255, 0.05);
+          box-shadow: inset 0 0 8px rgba(255, 255, 255, 0.5);
+      }
+
+      .launcher-input:focus-within {
+          box-shadow: inset 0 0 15px rgba(190, 245, 255, 0.7);
+          outline: var(--border-size, 3px) var(--border-style, solid) var(--border-color-active);
+      }
+
+      .launcher-results {
+      }
+
+      .launcher-item {
+          background: unset;
+          box-shadow: inset 0 0 12px rgba(255, 255, 255, 0.5);
+          border: 1px var(--border-style, solid) rgba(255, 255, 255, 0.6);
+      }
+
+      .launcher-item:hover {
+          background: #2c2e3e;
+          box-shadow: inset 0 0 10px rgba(190, 245, 255, 0.7);
+      }
+
+      .launcher-exec {
+      }
+
+      .launcher-key {
+      }
+
+      .launcher-plugins {
+      }
+
+      .launcher-plugin {
+          background: unset;
+          box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.5);
+          border: var(--border-size, 3px) var(--border-style, solid) rgba(255, 255, 255, 0.6);
+      }
+
+      .launcher-plugin:hover {
+          background: #2c2e3e;
+          box-shadow: inset 0 0 20px rgba(190, 245, 255, 0.7);
+      }
+      '';
+      
+      settings = {
+        kill_bind = "ctrl+shift+alt, h";
+        windows = {
+          items_per_row = 5;
+          overview = {
+            strip_html_from_workspace_title = true;
+            key = "alt_l";
+            modifier = "alt";
+            launcher = {
+              default_terminal = "alacritty";
+              max_items = 9;
+              launch_modifier = "ctrl";
+              show_when_empty = true;
+              plugins.websearch = {
+                  engines = [{
+                      name = "DuckDuckGo";
+                      url = "https://duckduckgo.com/?q={}";
+                      key = "d";
+                  }
+                  {
+                      name = "YouTube";
+                      url = "https://www.youtube.com/results?search_query={}";
+                      key = "y";
+                  }];
+              };
+              plugins.terminal = {};
+              plugins.calc = {};
+              plugins.path = {};
+            };
+          };
+          switch = {
+            modifier = "ctrl";
+            show_workspaces = true;
+          };
+        };
+      };
+    };
+
+    services.dunst = {
+      enable = true;
+      settings = {
+        global = {
+          width = 330;
+          height = 110;
+          follow = "keyboard";
+          origin = "top-right";
+          title = "Dunst";
+          class = "dunst";
+          force_xinerama = false;
+          transparency = 10;
+          frame_color = "#eceff1";
+          font = "Iosevka Nerd Font Medium 11";
+          corner_radius = 10;
+          word_wrap = "yes";
+          mouse_middle_click = "close_all";
+          mouse_left_click = "close_current";
+        };
+
+        urgency_low = {
+          background = "#1A1B26";
+          foreground = "#ffffff";
+          timeout = 2;
+        };
+        urgency_normal = {
+          background = "#1A1B26";
+          foreground = "#ffffff";
+          timeout = 2;
+        };
+        urgency_critical = {
+          background = "#2e1212ff";
+          foreground = "#ffffff";
+          frame_color = "#ff0000";
+          timeout = 3;
+        };
+      };
+    };
+
+    programs.fastfetch = {
+      enable = true;
+      settings =
+        {
+          logo = {
+            source = "nixos";
+            padding = {
+              right = 4;
+            };
+          };
+          display = {
+            size = {
+              binaryPrefix = "si";
+            };
+            color = "blue";
+            separator = "  ";
+          };
+          modules = [
+            {
+              type = "custom";
+              format = "{#1}[{#}Time]";
+            }
+            {
+              type = "datetime";
+              key = "󰅐 Date";
+              format = "{1}-{3}-{11}";
+            }
+            {
+              type = "uptime";
+              key = "󰅐 Uptime";
+            }
+            "break"
+            {
+              type = "custom";
+              format = "{#1}[{#}Packages]";
+            }
+            {
+              type = "packages";
+              key = "󰏖 Packages";
+              format = "{all}";
+            }
+            "break"
+            {
+              type = "custom";
+              format = "{#1}[{#}Desktop Environment]";
+            }
+            {
+              type = "de";
+              key = "󰧨 DE";
+            }
+            {
+              type = "wm";
+              key = "󱂬 WM";
+            }
+            {
+              type = "wmtheme";
+              key = "󰉼 Theme";
+            }
+            {
+              type = "display";
+              key = "󰹑 Resolution";
+            }
+            {
+              type = "shell";
+              key = "󰞷 Shell";
+            }
+            {
+              type = "terminalfont";
+              key = "󰛖 Font";
+            }
+            "player"
+            "media"
+            "break"
+            {
+              type = "custom";
+              format = "{#1}[{#}Hardware]";
+            }
+            {
+              type = "cpu";
+              key = "󰻠 CPU";
+            }
+            {
+              type = "gpu";
+              key = "󰢮 GPU";
+            }
+            {
+              type = "memory";
+              key = "󰍛 Memory";
+            }
+          ];
+        };
+    };
+
+    programs.rofi = {
+      enable = true;
+      package = pkgs.rofi-wayland;
+      theme = let
+        inherit (config.lib.formats.rasi) mkLiteral;
+      in {
+        "*" = {
+          font = "Iosevka Nerd Font Medium 14";
+
+          bg0 = mkLiteral "rgba(26, 27, 38, 0.8)";
+          bg1 = mkLiteral "rgba(31, 35, 53, 0.8)";
+          bg2 = mkLiteral "rgba(36, 40, 59, 0.8)";
+          bg3 = mkLiteral "rgba(65, 72, 104, 0.8)";
+          fg0 = mkLiteral "#c0caf5";
+          fg1 = mkLiteral "#a9b1d6";
+          fg2 = mkLiteral "#737aa2";
+          red = mkLiteral "rgba(162, 119, 255, 0.9)";
+          green = mkLiteral "#9ece6a";
+          yellow = mkLiteral "#e0af68";
+          blue = mkLiteral "#7aa2f7";
+          magenta = mkLiteral "#9a7ecc";
+          cyan = mkLiteral "#4abaaf";
+
+          accent = mkLiteral "@red";
+          urgent = mkLiteral "@yellow";
+
+          background-color = mkLiteral "transparent";
+          text-color = mkLiteral "@fg0";
+
+          margin = 0;
+          padding = 0;
+          spacing = 0;
+        };
+
+        "element-icon, element-text, scrollbar" = {
+          cursor = mkLiteral "pointer";
+        };
+
+        "window" = {
+          location = mkLiteral "northwest";
+          width = mkLiteral "400px";
+
+          background-color = mkLiteral "@bg1";
+          border = mkLiteral "1px";
+          border-color = mkLiteral "@bg3";
+          border-radius = mkLiteral "6px";
+        };
+
+        "inputbar" = {
+          spacing = mkLiteral "8px";
+          padding = mkLiteral "4px 8px";
+          children = map mkLiteral [ "icon-search" "entry" ];
+
+          background-color = mkLiteral "@bg0";
+        };
+
+        "icon-search, entry, element-icon, element-text" = {
+          vertical-align = mkLiteral "0.5";
+        };
+
+        "textbox" = {
+          padding = mkLiteral "4px 8px";
+          background-color = mkLiteral "@bg2";
+        };
+
+        "listview" = {
+          padding = mkLiteral "4px 0px";
+          lines = 12;
+          columns = 1;
+          scrollbar = mkLiteral "true";
+          fixed-height = mkLiteral "false";
+          dynamic = mkLiteral "true";
+        };
+
+        "element" = {
+          padding = mkLiteral "4px 8px";
+          spacing = mkLiteral "8px";
+        };
+
+        "element normal urgent" = {
+          text-color = mkLiteral "@urgent";
+        };
+
+        "element normal active" = {
+          text-color = mkLiteral "@accent";
+        };
+        
+        "element alternate active" = {
+          text-color = mkLiteral "@accent";
+        };
+
+        "element selected" = {
+          text-color = mkLiteral "@bg1";
+          background-color = mkLiteral "@accent";
+        };
+
+        "element selected urgent" = {
+          background-color = mkLiteral "@urgent";
+        };
+
+        "element-icon" = {
+          size = mkLiteral "0.8em";
+        };
+
+        "element-text" = {
+          text-color = mkLiteral "inherit";
+        };
+
+        "scrollbar" = {
+          handle-width = mkLiteral "4px";
+          handle-color = mkLiteral "@fg2";
+          padding = mkLiteral "0 4px";
+        };
+      };
+    };
+
+    programs.waybar = {
+      enable = true;
+      settings = [
+        {
+          layer = "top";
+          position = "top";
+          modules-center = [ "hyprland/workspaces" ];
+          modules-left = [
+            "custom/startmenu"
+            "custom/arrow6"
+            "pulseaudio"
+            "cpu"
+            "memory"
+            "custom/arrow7"
+            "hyprland/window"
+          ];
+          modules-right = [
+            "custom/arrow4"
+            "custom/exit"
+            "battery"
+            "custom/arrow2"
+            "tray"
+            "custom/arrow1"
+            "clock"
+          ];
+
+          "hyprland/workspaces" = {
+            format = "{name}";
+            format-icons = {
+              default = " ";
+              active = " ";
+              urgent = " ";
+            };
+            on-scroll-up = "hyprctl dispatch workspace e+1";
+            on-scroll-down = "hyprctl dispatch workspace e-1";
+          };
+          "clock" = {
+            format = '' {:L%I:%M %p}'';
+            tooltip = true;
+            tooltip-format = "<big>{:%A, %d.%B %Y }</big>\n<tt><small>{calendar}</small></tt>";
+          };
+          "hyprland/window" = {
+            max-length = 22;
+            separate-outputs = false;
+          };
+          "memory" = {
+            interval = 5;
+            format = " {}%";
+            tooltip = true;
+          };
+          "cpu" = {
+            interval = 5;
+            format = " {usage:2}%";
+            tooltip = true;
+          };
+          "disk" = {
+            format = " {free}";
+            tooltip = true;
+          };
+          "network" = {
+            format-icons = [
+              "󰤯"
+              "󰤟"
+              "󰤢"
+              "󰤥"
+              "󰤨"
+            ];
+            format-ethernet = " {bandwidthDownOctets}";
+            format-wifi = "{icon} {signalStrength}%";
+            format-disconnected = "󰤮";
+            tooltip = false;
+          };
+          "tray" = {
+            spacing = 12;
+          };
+          "pulseaudio" = {
+            format = "{icon} {volume}% {format_source}";
+            format-bluetooth = "{volume}% {icon} {format_source}";
+            format-bluetooth-muted = "󰝟 {icon} {format_source}";
+            format-muted = "󰝟 MUTED";
+            format-source = " {volume}%";
+            format-source-muted = " MUTED";
+            format-icons = {
+              headphone = "";
+              hands-free = "";
+              headset = "";
+              phone = "";
+              portable = "";
+              car = "";
+              default = [
+                ""
+                ""
+                ""
+              ];
+            };
+            on-click = "sleep 0.1 && pavucontrol";
+            on-click-middle = "sleep 0.1 && wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle";
+          };
+          "custom/exit" = {
+            tooltip = false;
+            format = "";
+            on-click = "sleep 0.1 && hyprlock";
+          };
+          "custom/startmenu" = {
+            tooltip = false;
+            format = "";
+            on-click = "sleep 0.1 && rofi -show drun";
+          };
+          "battery" = {
+            states = {
+              warning = 30;
+              critical = 15;
+            };
+            format = "{icon} {capacity}%";
+            format-charging = "󰂄 {capacity}%";
+            format-plugged = "󱘖 {capacity}%";
+            format-icons = [
+              "󰁺"
+              "󰁻"
+              "󰁼"
+              "󰁽"
+              "󰁾"
+              "󰁿"
+              "󰂀"
+              "󰂁"
+              "󰂂"
+              "󰁹"
+            ];
+            on-click = "";
+            tooltip = false;
+          };
+          "custom/arrow1" = {
+            format = "";
+          };
+          "custom/arrow2" = {
+            format = "";
+          };
+          "custom/arrow4" = {
+            format = "";
+          };
+          "custom/arrow6" = {
+            format = "";
+          };
+          "custom/arrow7" = {
+            format = "";
+          };
+        }
+      ];
+
+      style = lib.concatStrings [
+        ''
+          * {
+            font-family: Iosevka Nerd Font;
+            font-size: 16px;
+            border-radius: 0px;
+            border: none;
+            min-height: 0px;
+          }
+          window#waybar {
+            background: rgba(31, 35, 53, 0.8);
+            color: #e9e9f4;
+          }
+          #workspaces button {
+            padding: 0px 5px;
+            background: transparent;
+            color: rgba(162, 119, 255, 1);
+          }
+          #workspaces button.active {
+            color: rgba(97, 254, 203, 1);
+            background: rgba(16, 16, 16, 0.9);
+          }
+          #workspaces button:hover {
+            color: #e9e9f4;
+          }
+          tooltip {
+            background: rgba(28, 28, 28, 0.7);
+            border: 1px solid #e9e9f4;
+            border-radius: 12px;
+          }
+          tooltip label {
+            color: #e9e9f4;
+          }
+          #window {
+            padding: 0px 10px;
+          }
+          #pulseaudio, #cpu, #memory {
+            padding: 0px 10px;
+            background: rgba(162, 119, 255, 1);
+            color: rgba(28, 28, 28, 0.7);
+          }
+          #custom-startmenu {
+            color: #4d4f68;
+            padding: 0px 14px;
+            font-size: 20px;
+            background: #e7c3ff;
+          }
+          #network, #battery,
+          #custom-exit {
+            background: rgba(97, 254, 203, 1);
+            color: rgba(28, 28, 28, 0.7);
+            padding: 0px 10px;
+          }
+          #tray {
+            background: #4d4f68;
+            color: rgba(28, 28, 28, 0.7);
+            padding: 0px 10px;
+          }
+          #clock {
+            font-weight: bold;
+            padding: 0px 10px;
+            color: rgba(28, 28, 28, 0.7);
+            background: #c3fffe;
+          }
+          #custom-arrow1 {
+            font-size: 24px;
+            color: #c3fffe;
+            background: #4d4f68;
+          }
+          #custom-arrow2 {
+            font-size: 24px;
+            color: #4d4f68;
+            background: rgba(97, 254, 203, 1);
+          }
+          #custom-arrow4 {
+            font-size: 24px;
+            color: rgba(97, 254, 203, 1);
+            background: transparent;
+          }
+          #custom-arrow6 {
+            font-size: 24px;
+            color: #e7c3ff;
+            background: rgba(162, 119, 255, 1);
+          }
+          #custom-arrow7 {
+            font-size: 24px;
+            color: rgba(162, 119, 255, 1);
+            background: transparent;
+          }
+        ''
+      ];
+    };
+
+    programs.alacritty = {
+    	enable = true;
+      theme = "aura";
+    	settings = {
+    	    terminal.shell = {
+    	        program = "fish";
+    	    };
+          window = {
+            opacity = 0.75;
+          };
+          font = {
+            size = 14;
+            normal = {
+              family = "Iosevka Nerd Font";
+            };
+          };
+    	};
+    };
+    
+    wayland.windowManager.hyprland = {
+      enable = true;
+      systemd.enable = true;
+      xwayland = {
+        enable = true;
+      };
+
+      settings = {
+        env = [
+          "LIBVA_DRIVER_NAME,nvidia"
+          "__GLX_VENDOR_LIBRARY_NAME,nvidia"
+          "__GL_VRR_ALLOWED,1"
+          "WLR_DRM_NO_ATOMIC,1"
+          "NIXOS_OZONE_WL,1"
+          "XDG_CURRENT_DESKTOP,Hyprland"
+          "XDG_SESSION_TYPE,wayland"
+          "XDG_SESSION_DESKTOP,Hyprland"
+          "QT_QPA_PLATFORM,wayland"
+          "GTK_THEME,Orchis-Dark"
+          "QT_STYLE_OVERRIDE,adwaita-dark"
+        ];
+
+        "$mod" = "SUPER";
+        "$term" = "alacritty";
+        "$browser" = "librewolf";
+        "$discord" = "equibop";
+        "$filemanager" = "thunar";
+      
+        exec-once = [
+          "pkill swww;sleep .5 && swww-daemon && swww img '$HOME/.system-assets/images/current-wallpaper.jpg'"
+          "pkill waybar;sleep .5 && waybar"
+          "wl-paste --type text --watch cliphist store"
+          "wl-paste --type image --watch cliphist store"
+          "wl-clip-persist --clipboard regular &"
+          "systemctl --user start hyprpolkitagent"
+          "hyprctl setcursor Adwaita 28" # oh my god im gonna kms </3
+          "navidrome"
+          "thunderbird"
+        ];
+
+        general = {
+          gaps_in = 4;
+          gaps_out = 10;
+
+          resize_on_border = true;
+
+          border_size = 2;
+          layout = "dwindle";
+        };
+
+        xwayland = {
+          force_zero_scaling = true;
+        };
+
+        animations = {
+          enabled = true;
+          bezier = [
+            "wind, 0.05, 0.9, 0.1, 1.05"
+            "winIn, 0.1, 1.1, 0.1, 1.1"
+            "winOut, 0.3, -0.3, 0, 1"
+            "liner, 1, 1, 1, 1"
+          ];
+          animation = [
+            "windows, 1, 6, wind, slide"
+            "windowsIn, 1, 6, winIn, slide"
+            "windowsOut, 1, 5, winOut, slide"
+            "windowsMove, 1, 5, wind, slide"
+            "border, 1, 1, liner"
+            "borderangle, 1, 30, liner, loop"
+            "fade, 1, 10, default"
+            "workspaces, 1, 5, wind"
+          ];
+        };
+
+        decoration = {
+          rounding = 9;
+
+          blur = {
+            enabled = true;
+            size = 6;
+            passes = 3;
+            ignore_opacity = true;
+            new_optimizations = true;
+            xray = false;
+          };
+
+          shadow = {
+            enabled = false;
+          };
+        };
+	
+	      monitor = [
+          "DP-1, 2560x1440@240,0x0,1.6"
+          "HDMI-A-2, 1920x1080@144,1600x0,1.2"
+        ];	
+
+        workspace = [
+          "1, monitor:DP-1, default:true"
+          "2, monitor:DP-1"
+          "3, monitor:DP-1"
+          "4, monitor:DP-1"
+          "5, monitor:DP-1"
+          "6, monitor:DP-1"
+          "7, monitor:DP-1"
+          "8, monitor:DP-1"
+          "9, monitor:DP-1"
+          "10, monitor:DP-1"
+          "11, monitor:HDMI-A-2, default:true"
+          "12, monitor:HDMI-A-2"
+          "13, monitor:HDMI-A-2"
+          "14, monitor:HDMI-A-2"
+          "15, monitor:HDMI-A-2"
+          "16, monitor:HDMI-A-2"
+          "17, monitor:HDMI-A-2"
+          "18, monitor:HDMI-A-2"
+          "19, monitor:HDMI-A-2"
+          "20, monitor:HDMI-A-2"
+        ];
+
+        misc = {
+          force_default_wallpaper = 0;
+          disable_hyprland_logo = true;
+        };
+
+        ecosystem = {
+          no_donation_nag = true;
+          no_update_news = true;
+        };
+        
+        cursor = {
+          warp_on_change_workspace = 1;
+          no_warps = true;
+        };
+
+        windowrulev2 = [
+          "center,class:^(jetbrains-.*)$,title:^(splash)$,floating:1"
+          "nofocus,class:^(jetbrains-.*)$,title:^(splash)$,floating:1"
+          "noborder,class:^(jetbrains-.*)$,title:^(splash)$,floating:1"
+
+          "stayfocused,class:^(jetbrains-.*)$,title:^( )$,floating:1"
+          "noborder,class:^(jetbrains-.*)$,title:^( )$,floating:1"
+
+          "nofocus,class:^(jetbrains-.*)$,title:^(win.*)$,floating:1"
+          
+          "opacity 0.85 0.85,class:^([Tt]hunar)$"
+          "opacity 0.90 0.90,class:^([Tt]hunderbird)$"
+          "opacity 0.90 0.90,class:^([Dd]unst)$"
+          "opacity 0.95 0.95,class:^(org.prismlauncher.PrismLauncher)$"
+          "opacity 0.95 0.95,class:^(codium)$"
+          "opacity 0.90 0.90,class:^(equibop)$"
+          "opacity 0.95 0.95,class:^(com.github.gittyup.)$"
+          "opacity 0.90 0.90,class:^(feishin)$"
+          "opacity 0.80 0.80,class:^(xarchiver)$"
+          "opacity 0.80 0.80,class:^(qt5ct)$"
+          "opacity 0.80 0.80,class:^(qt6ct)$"
+          "opacity 0.80 0.80,class:^(kvantummanager)$"
+          "opacity 0.80 0.70,class:^(org.pulseaudio.pavucontrol)$"
+          "opacity 0.80 0.70,class:^(blueman-manager)$"
+          "opacity 0.80 0.70,class:^(nm-applet)$"
+          "opacity 0.80 0.70,class:^(nm-connection-editor)$"
+          "opacity 0.80 0.70,class:^(org.kde.polkit-kde-authentication-agent-1)$"
+          "opacity 0.80 0.70,class:^(polkit-gnome-authentication-agent-1)$"
+          "opacity 0.80 0.70,class:^(org.freedesktop.impl.portal.desktop.gtk)$"
+          "opacity 0.80 0.70,class:^(org.freedesktop.impl.portal.desktop.hyprland)$"
+          "opacity 0.70 0.70,class:^(steamwebhelper)$"
+
+          "opacity 0.80 0.80,class:^(com.github.tchx84.Flatseal)$"
+          "opacity 0.80 0.80,class:^(com.obsproject.Studio)$ # Obs-Qt"
+          "opacity 0.80 0.80,class:^(net.davidotek.pupgui2)$ # ProtonUp-Qt"
+          "opacity 0.80 0.80,class:^(yad)$ # Protontricks-Gtk"
+
+          "float,class:^(org.kde.dolphin)$,title:^(Progress Dialog — Dolphin)$"
+          "float,class:^(org.kde.dolphin)$,title:^(Copying — Dolphin)$"
+          "float,class:^([Tt]hunar)$,title:^(File Operation Progress)$"
+          "size 50% 50%,class:^(librewolf)$,title:^(Save Image)$"
+          "float,class:^(xarchiver)$"
+          "float,title:.*[Ww]inetricks.*"
+          "float,title:^(About Mozilla Firefox)$"
+          "float,class:^([Aa]lacritty)$"
+          "size 72% 70%,class:^([Aa]lacritty)$"
+          "opacity 1.0, 1.0,class:^([Aa]lacritty)$"
+          "float,class:^(qimgv)$"
+
+          "size 50% 50%,class:^(qimgv)$"
+
+          "float,class:^(mpv)$"
+          "float,class:^(qt5ct)$"
+          "float,class:^(qt6ct)$"
+          "float,class:^(org.pulseaudio.pavucontrol)$"
+          
+          "float,class:^(.blueman-manager-wrapped)$"
+          "size 50% 50%,class:^(.blueman-manager-wrapped)$"
+
+          "float,class:^(nm-applet)$"
+          "float,class:^(nm-connection-editor)$"
+          "float,class:^(org.kde.polkit-kde-authentication-agent-1)$"
+
+          "float,class:^(net.davidotek.pupgui2)$ # ProtonUp-Qt"
+          "float,class:^(yad)$ # Protontricks-Gtk"
+
+          "float,title:^(Open)$"
+          "float,title:^(Choose Files)$"
+          "float,title:^(Save As)$"
+          "float,title:^(Confirm to replace files)$"
+          "float,title:^(File Operation Progress)$"
+          "float,class:^(xdg-desktop-portal-gtk)$"
+        ];
+
+        debug = {
+          disable_logs = false;
+        };
+
+        binde = [
+          " , xf86audioraisevolume, exec, ${control-volume}/bin/control-volume +"
+          " , xf86audiolowervolume, exec, ${control-volume}/bin/control-volume -"
+        ];
+
+        bindm = [
+          # mouse movements
+          "$mod, mouse:272, movewindow"
+          "$mod, mouse:273, resizewindow"
+        ];
+
+        bind = [
+          # keybinds
+          "$mod, Q, exec, $term"
+          "$mod, F, exec, $browser"
+          "$mod, D, exec, $discord"
+          "$mod, E, exec, $filemanager"
+	        "$mod, S, exec, rofi -show drun"
+          "$mod, C, killactive"
+          "$mod Shift, C, exec, kill $(${pkgs.hyprland}/bin/hyprctl activewindow -j | jq -r '.pid')"
+          " , f11, fullscreen"
+          "$mod Shift, S, exec, /usr/bin/screenshot.sh sf"
+          "$mod, W, togglefloating"
+          "$mod, V, exec, cliphist list | rofi -dmenu | cliphist decode | wl-copy"
+        ]
+        ++ (
+          # workspaces
+          # binds $mod + [shift +] {1..9} to [move to] workspace {1..9}
+          builtins.concatLists (builtins.genList (i:
+              let 
+                workspace = i + 1;
+              in [
+                "$mod, code:1${toString i}, exec, hyprmon-workspaces workspace ${toString workspace}"
+                "$mod SHIFT, code:1${toString i}, exec, hyprmon-workspaces movetoworkspace ${toString workspace}"
+              ]
+            )
+            9)
+        );
+      };
+      extraConfig = "
+        layerrule = blur,rofi
+        layerrule = blur,waybar
+      ";
+    };
+
+    home.sessionVariables.NIXOS_OZONE_WL = "1";
+    home.sessionVariables.QML_IMPORT_PATH = "${pkgs.hyprland-qt-support}/lib/qt-6/qml";
+  };
+  
+  # List packages installed in system profile.
+  # You can use https://search.nixos.org/ to find more packages (and options).
+  environment.localBinInPath = true;
+  environment.variables = {
+    EDITOR = "nano";
+    TERMINAL = "alacritty";
+    GC_INITIAL_HEAP_SIZE = "32M";
+    DEFAULT_BROWSER = "${pkgs.librewolf}/bin/librewolf";
+  };
+  environment.systemPackages = with pkgs; [
+    headsetcontrol
+    hyprmon-workspaces
+    setup_assets
+    control-volume
+    gedit
+    bat
+    bash
+    bc
+    wget
+    curl
+    hyprcursor
+    nix-diff
+    pkg-config
+    openssl
+    hypridle
+    jq
+    gnome-themes-extra
+    gsettings-desktop-schemas
+    glib
+    cliphist
+    wl-clip-persist
+    hyprland-qt-support # for hyprland-qt-support
+    clang
+    git
+    imagemagick
+    gvfs
+    swww
+    pipx
+    ffmpeg
+    wl-clipboard
+    hyprpolkitagent
+    pavucontrol
+    grimblast
+    swappy
+  ];
+  
+  system.stateVersion = "25.11"; # Did you read the comment?
+}
