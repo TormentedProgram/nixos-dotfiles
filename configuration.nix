@@ -105,7 +105,7 @@ in
 
   networking = {
     networkmanager.enable = true;
-    hostName = "chromasen-nix"; # Define your hostname.
+    hostName = "nixos"; # Define your hostname.
   }; 
 
   # Set your time zone.
@@ -1329,7 +1329,6 @@ in
   environment.systemPackages = with pkgs; [
     headsetcontrol
     hyprmon-workspaces
-    setup_assets
     control-volume
     gedit
     bat
