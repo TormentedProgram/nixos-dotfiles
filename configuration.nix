@@ -36,6 +36,75 @@ let
         ${pkgs.gsound}/bin/gsound-play --file=$HOME/.system-assets/sounds/volume.ogg
         dunstify -r 1000 "VOLUME: $percentage"
     '';
+    take-screenshot = pkgs.writeShellScriptBin "take-screenshot" ''
+      # Create secure temporary file
+      temp_screenshot=$(mktemp -t screenshot_XXXXXX.png)
+
+      if [ -z "$XDG_PICTURES_DIR" ]; then
+        XDG_PICTURES_DIR="$HOME/Pictures"
+      fi
+
+      if [ -z "$XDG_CONFIG_HOME" ]; then
+        XDG_CONFIG_HOME="$HOME"
+      fi
+
+      confDir="''\${confDir:-$XDG_CONFIG_HOME}"
+      save_dir="''\${2:-$XDG_PICTURES_DIR/Screenshots}"
+      save_file=$(date +'%y%m%d_%Hh%Mm%Ss_screenshot.png')
+      annotation_tool="swappy"
+      annotation_args=("-o" "''\${save_dir}/''\${save_file}" "-f" "''\${temp_screenshot}")
+
+      mkdir -p "$save_dir"
+
+      # Fixes the issue where the annotation tool doesn't save the file in the correct directory
+      if [[ "$annotation_tool" == "swappy" ]]; then
+        swpy_dir="''\${confDir}/swappy"
+        mkdir -p "$swpy_dir"
+        echo -e "[Default]\nsave_dir=$save_dir\nsave_filename_format=$save_file" >"''\${swpy_dir}"/config
+      fi
+
+      # Add any additional annotation arguments
+      [[ -n "''\${SCREENSHOT_ANNOTATION_ARGS[*]}" ]] && annotation_args+=("''\${SCREENSHOT_ANNOTATION_ARGS[@]}")
+
+      # screenshot function, globbing was difficult to read and maintain
+      take_screenshot() {
+        local mode=$1
+        shift
+        local extra_args=("$@")
+
+        # execute grimblast with given args
+        if "grimblast" "''\${extra_args[@]}" copysave "$mode" "$temp_screenshot"; then
+          if ! "''\${annotation_tool}" "''\${annotation_args[@]}"; then
+            dunstify  "Screenshot Error" "Failed to open annotation tool"
+            return 1
+          fi
+        else
+          dunstify "Screenshot Error" "Failed to take screenshot"
+          return 1
+        fi
+      }
+
+      case $1 in
+      p) # print all outputs
+        take_screenshot "screen"
+        ;;
+      s) # drag to manually snip an area / click on a window to print it
+        take_screenshot "area"
+        ;;
+      sf) # frozen screen, drag to manually snip an area / click on a window to print it
+        take_screenshot "area" "--freeze"
+        ;;
+      m) # print focused monitor
+        take_screenshot "output"
+        ;;
+      esac
+
+      [ -f "$temp_screenshot" ] && rm "$temp_screenshot"
+
+      if [ -f "''\${save_dir}/''\${save_file}" ]; then
+        dunstify "''\${save_file}" "saved in ''\${save_dir}"
+      fi
+    '';
 in
 {
   imports =
@@ -1289,7 +1358,7 @@ in
           "$mod, C, killactive"
           "$mod Shift, C, exec, kill $(${pkgs.hyprland}/bin/hyprctl activewindow -j | jq -r '.pid')"
           " , f11, fullscreen"
-          "$mod Shift, S, exec, /usr/bin/screenshot.sh sf"
+          "$mod Shift, S, exec, take-screenshot sf"
           "$mod, W, togglefloating"
           "$mod, V, exec, cliphist list | rofi -dmenu | cliphist decode | wl-copy"
         ]
