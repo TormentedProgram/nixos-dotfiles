@@ -125,7 +125,6 @@ in
 
   virtualisation.virtualbox.host.enable = true;
   users.extraGroups.vboxusers.members = ["tormented"];
-  virtualisation.virtualbox.host.enableExtensionPack = true;
 
   boot.kernelParams = [
     "systemd.mask=systemd-vconsole-setup.service"
@@ -181,6 +180,7 @@ in
   i18n.defaultLocale = "en_AU.UTF-8";
   services.automatic-timezoned.enable = true; #based on IP location
 
+  services.udisks2.enable = true;
   i18n.extraLocaleSettings = {
     LC_ADDRESS = "en_AU.UTF-8";
     LC_IDENTIFICATION = "en_AU.UTF-8";
@@ -233,10 +233,8 @@ in
       "nvidia-settings"
       "steam"
       "steam-unwrapped"
-      "rust-rover"
       "chapterskip"
       "evafast"
-      "Oracle_VirtualBox_Extension_Pack"
     ];
 
   # Enable touchpad support (enabled default in most desktopManager).
@@ -312,8 +310,6 @@ in
       umu-launcher
       rustup
       mcpelauncher-ui-qt
-      jetbrains.rust-rover
-      jetbrains.idea-community-bin
       nicotine-plus
       micromamba
       prismlauncher
@@ -465,6 +461,15 @@ in
     	    fastfetch
           eval "$(micromamba shell hook --shell fish)"
     	'';
+    };
+
+    services.udiskie = {
+      enable = true;
+      settings = {
+        program_options = {
+            file_manager = "${pkgs.xfce.thunar}/bin/thunar";
+        };
+      };
     };
 
     services.hyprshell = {
@@ -1399,6 +1404,7 @@ in
     headsetcontrol
     hyprmon-workspaces
     control-volume
+    take-screenshot
     gedit
     bat
     bash
