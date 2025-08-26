@@ -4,6 +4,7 @@
       ./fish.nix
       ./fastfetch.nix
       ./alacritty.nix
+      ./mpv.nix
     ];
   };
 }
