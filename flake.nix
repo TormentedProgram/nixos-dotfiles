@@ -17,8 +17,10 @@
         specialArgs = {inherit inputs;};
         modules = [ 
           ./configuration.nix 
-          ./modules/home
-          ./modules/home/scripts
+          ./modules/user/tormented/home
+          ./modules/user/tormented/home/scripts
+          ./modules/user/tormented/scripts
+          ./modules/user/tormented
           ./modules/system
           ./modules/system/scripts
         ];
