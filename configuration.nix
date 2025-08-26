@@ -6,7 +6,7 @@
 
 let
     home-manager = builtins.fetchTarball https://github.com/nix-community/home-manager/archive/master.tar.gz;
-    hyprmon-workspaces = pkgs.writeShellScriptBin "hyprmon-workspaces" ''
+    workspace-switch = pkgs.writeShellScriptBin "workspace-switch" ''
         monitorresult=$(${pkgs.hyprland}/bin/hyprctl -j monitors | ${pkgs.jq}/bin/jq --raw-output '.[] | select(.focused == true) | .id')
         result=$(( $monitorresult * 10 + $2 ))
         ${pkgs.hyprland}/bin/hyprctl dispatch $1 $result
@@ -309,6 +309,7 @@ in
       lutris
       umu-launcher
       rustup
+      libreoffice
       mcpelauncher-ui-qt
       nicotine-plus
       micromamba
@@ -1308,6 +1309,7 @@ in
           "float,class:^(xarchiver)$"
           "float,title:.*[Ww]inetricks.*"
           "float,title:^(About Mozilla Firefox)$"
+          "float,class:^(VirtualBox Machine)$"
           "float,class:^([Aa]lacritty)$"
           "size 72% 70%,class:^([Aa]lacritty)$"
           "opacity 1.0, 1.0,class:^([Aa]lacritty)$"
@@ -1374,8 +1376,8 @@ in
               let 
                 workspace = i + 1;
               in [
-                "$mod, code:1${toString i}, exec, hyprmon-workspaces workspace ${toString workspace}"
-                "$mod SHIFT, code:1${toString i}, exec, hyprmon-workspaces movetoworkspace ${toString workspace}"
+                "$mod, code:1${toString i}, exec, workspace-switch workspace ${toString workspace}"
+                "$mod SHIFT, code:1${toString i}, exec, workspace-switch movetoworkspace ${toString workspace}"
               ]
             )
             9)
@@ -1402,7 +1404,7 @@ in
   };
   environment.systemPackages = with pkgs; [
     headsetcontrol
-    hyprmon-workspaces
+    workspace-switch
     control-volume
     take-screenshot
     gedit
