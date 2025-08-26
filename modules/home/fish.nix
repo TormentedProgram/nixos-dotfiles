@@ -1,9 +1,6 @@
-{config, pkgs, inputs, ...}:
+{ pkgs, ...}:
 
 {
-  imports = [
-    inputs.home-manager.nixosModules.default
-  ];
   programs.fish = {
     enable = true;
     shellInit = ''

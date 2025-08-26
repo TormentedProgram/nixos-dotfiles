@@ -17,16 +17,11 @@
         specialArgs = {inherit inputs;};
         modules = [ 
           ./configuration.nix 
-        ] ++ (
-          let
-            importAllNixFiles = dir: 
-              builtins.map 
-                (name: dir + "/${name}") 
-                (builtins.attrNames (builtins.readDir dir));
-          in
-            importAllNixFiles ./modules/home ++ 
-            importAllNixFiles ./modules/system
-        );
+          ./modules/home
+          ./modules/home/scripts
+          ./modules/system
+          ./modules/system/scripts
+        ];
       };
     };
 }
