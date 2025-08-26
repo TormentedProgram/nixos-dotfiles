@@ -452,18 +452,6 @@ in
       };
     };
 
-    programs.fish = {
-    	enable = true;
-    	shellInit = ''
-    	    source (starship init fish --print-full-init | psub)
-    	'';
-    	interactiveShellInit = ''
-    	    set fish_greeting
-    	    fastfetch
-          eval "$(micromamba shell hook --shell fish)"
-    	'';
-    };
-
     services.udiskie = {
       enable = true;
       settings = {
@@ -1430,7 +1418,6 @@ in
     imagemagick
     gvfs
     swww
-    pipx
     ffmpeg
     wl-clipboard
     hyprpolkitagent
