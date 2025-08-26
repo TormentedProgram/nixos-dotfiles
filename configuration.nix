@@ -385,7 +385,6 @@ in
       rofi-wayland
       hyprlock
       dconf
-      alacritty
       adwaita-icon-theme
       dunst
       orchis-theme
@@ -1004,25 +1003,6 @@ in
           }
         ''
       ];
-    };
-
-    programs.alacritty = {
-    	enable = true;
-      theme = "aura";
-    	settings = {
-    	    terminal.shell = {
-    	        program = "fish";
-    	    };
-          window = {
-            opacity = 0.75;
-          };
-          font = {
-            size = 14;
-            normal = {
-              family = "Iosevka Nerd Font";
-            };
-          };
-    	};
     };
     
     wayland.windowManager.hyprland = {
