@@ -6,5 +6,6 @@
     ./mpv.nix
     ./waybar.nix
     ./rofi.nix
+    ./hyprshell.nix
   ];
 }
