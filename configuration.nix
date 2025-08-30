@@ -143,7 +143,7 @@ in
   };
 
   networking.firewall = {
-    enable = true;
+    enable = false;
     
     /*allowedTCPPorts = [ 
       25565 #Minecraft Server
@@ -216,6 +216,8 @@ in
     fontDir.enable = true;
     fontconfig.useEmbeddedBitmaps = true;
     packages = with pkgs; [
+      ubuntu_font_family
+      liberation_ttf
       noto-fonts
       fira-code
       noto-fonts-cjk-sans
@@ -224,7 +226,17 @@ in
       nerd-fonts.jetbrains-mono # unstable
       nerd-fonts.fira-code # unstable
       nerd-fonts.fantasque-sans-mono #unstable
+      noto-fonts-cjk-sans
+      noto-fonts-cjk-serif
     ];
+
+    fontconfig = {
+      defaultFonts = {
+        serif = [  "Liberation Serif" "Noto Serif CJK JP" "Noto Serif CJK KR" "Noto Serif CJK SC" "Noto Serif CJK TC" "Noto Serif CJK HK" ];
+        sansSerif = [ "Ubuntu"" Noto Sans CJK JP" "Noto Sans CJK KR" "Noto Sans CJK SC" "Noto Sans CJK TC" "Noto Sans CJK HK" ];
+        monospace = [ "Ubuntu Mono" ];
+      };
+    };
   };
 
   nixpkgs.config.allowUnfreePredicate = pkg:
@@ -235,6 +247,11 @@ in
       "steam-unwrapped"
       "chapterskip"
       "evafast"
+      "cuda_cudart" #lazy ollama shit
+      "libcublas"
+      "cuda_cccl"
+      "cuda_nvcc"
+      "open-webui"
     ];
 
   # Enable touchpad support (enabled default in most desktopManager).
