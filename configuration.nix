@@ -143,23 +143,7 @@ in
   };
 
   networking.firewall = {
-    enable = false;
-    
-    /*allowedTCPPorts = [ 
-      25565 #Minecraft Server
-      27036
-    ];
-    allowedUDPPorts = [
-      4380
-    ];
-    allowedUDPPortRanges = [
-      { from = 27015; to = 27050; }
-      { from = 27000; to = 27100; }
-      { from = 27031; to = 27036; }
-    ];
-    allowedTCPPortRanges = [
-      { from = 27015; to = 27050; }
-    ];*/
+    enable = true;
   };
 
   boot.loader.systemd-boot = {
