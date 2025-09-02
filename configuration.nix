@@ -143,13 +143,14 @@ in
   };
 
   networking.firewall = {
-    enable = true;
+    enable = false;
   };
 
   boot.loader.systemd-boot = {
     enable = true;
   };
 
+  programs.partition-manager.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
   
   # Use Zen kernel.
@@ -310,7 +311,7 @@ in
       lutris
       umu-launcher
       rustup
-      libreoffice
+      onlyoffice-desktopeditors
       mcpelauncher-ui-qt
       nicotine-plus
       micromamba
