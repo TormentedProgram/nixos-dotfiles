@@ -7,6 +7,7 @@
     ./waybar.nix
     ./rofi.nix
     ./xdg.nix
+    ./starship.nix
     ./direnv.nix
     ./hyprshell.nix
   ];

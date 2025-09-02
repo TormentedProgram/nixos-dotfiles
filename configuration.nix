@@ -143,7 +143,7 @@ in
   };
 
   networking.firewall = {
-    enable = false;
+    enable = true;
   };
 
   boot.loader.systemd-boot = {
@@ -376,6 +376,35 @@ in
     style = "adwaita-dark";
   };
 
+  security.sudo = 
+  let
+    inherit (lib) mkForce mkDefault getExe';
+  in {
+    enable = true;
+    extraConfig = ''
+      Defaults lecture = never
+      Defaults pwfeedback
+    '';
+
+    extraRules = [
+      {
+        groups = [ "wheel" ];
+
+        commands = [
+          # allow reboot and shutdown without password
+          {
+            command = getExe' pkgs.systemd "reboot";
+            options = [ "NOPASSWD" ];
+          }
+          {
+            command = getExe' pkgs.systemd "shutdown";
+            options = [ "NOPASSWD" ];
+          }
+        ];
+      }
+    ];
+  };
+
   home-manager.useGlobalPkgs = true;
   home-manager.backupFileExtension = "bkp";  
   home-manager.users.tormented = { pkgs, config, ...}: {
@@ -383,7 +412,6 @@ in
     	xfce.thunar
       thunderbird
       xarchiver
-      starship
       hyprlock
       dconf
       adwaita-icon-theme
