@@ -10,6 +10,8 @@
     ripgrep # Better `grep`
     fd
     sd
+    bc
+    openssl
     tree
     gnumake
 
@@ -23,7 +25,6 @@
     # work.
     less
 
-    #User specific stuff
     xfce.thunar # file explorer
     thunderbird # email client
     xarchiver # lightweight archiving tool
@@ -31,11 +32,30 @@
     dconf
     adwaita-icon-theme
     dunst # Notification Daemon
-    orchis-theme 
+    orchis-theme
     librewolf # Preferred browser
     yt-dlp
     vscodium # no telemetry fork of vscode used as primary text editor
     qimgv # Preferred image viewer
+
+    pavucontrol # Volume Control Panel
+    swww # Wallpaper Manager
+    headsetcontrol # Headphone CLI
+
+    # Screenshot tools
+    grimblast # Screenshot Tool
+    swappy # Screenshot Editor
+
+    # Video tools
+    imagemagick # Convert image files
+    ffmpeg #Convert video files
+
+    hyprpolkitagent # Prompting password when needed
+
+    # Clipboard
+    wl-clipboard # Wayland clipboard
+    cliphist
+    wl-clip-persist
   ];
 
   # Programs natively supported by home-manager.
