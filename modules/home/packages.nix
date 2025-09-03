@@ -41,8 +41,8 @@
   # Programs natively supported by home-manager.
   # They can be configured in `programs.*` instead of using home.packages.
   programs = {
-    # Better `cat`
-    bat.enable = true;
+    eza.enable = true; # Better `ls`
+    bat.enable = true; # Better `cat`
     # Type `<ctrl> + r` to fuzzy search your shell history
     fzf.enable = true;
     jq.enable = true;
