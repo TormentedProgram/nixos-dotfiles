@@ -1,6 +1,7 @@
 {
   imports = [
-    ./gnome.nix
+    ./hyprland.nix
+    ./login.nix
   ];
-  services.xserver.enable = true;
+  programs.xwayland.enable = true;
 }

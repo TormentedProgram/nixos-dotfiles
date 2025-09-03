@@ -1,31 +1,18 @@
 { ... }:
 {
   programs = {
-    # on macOS, you probably don't need this
-    bash = {
+    fish = {
       enable = true;
-      initExtra = ''
-        # Custom bash profile goes here
+      shellInit = ''
+          zoxide init fish | source
+          eval "$(micromamba shell hook --shell fish)"
+          direnv hook fish | source
       '';
-    };
-
-    # For macOS's default shell.
-    zsh = {
-      enable = true;
-      autosuggestion.enable = true;
-      syntaxHighlighting.enable = true;
-      enableCompletion = true;
-      envExtra = ''
-        # Custom ~/.zshenv goes here
-      '';
-      profileExtra = ''
-        # Custom ~/.zprofile goes here
-      '';
-      loginExtra = ''
-        # Custom ~/.zlogin goes here
-      '';
-      logoutExtra = ''
-        # Custom ~/.zlogout goes here
+      interactiveShellInit = ''
+          set fish_greeting
+          fastfetch
+          alias cd="z"
+          alias ls="eza -1 -lh --icons --group-directories-first --no-permissions --no-user --time-style '+%_d %b %I:%M %p' --sort=modified --hyperlink -T -L=2"
       '';
     };
 
