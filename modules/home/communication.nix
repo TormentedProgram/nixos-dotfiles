@@ -4,10 +4,9 @@
   #
   # Search for packages here: https://search.nixos.org/packages
   home.packages = with pkgs; [
-    teams-for-linux
-    onlyoffice-desktopeditors
-    virtualbox
-    jetbrains.pycharm-community
+    equibop
+    telegram
+    thunderbird # email client
   ];
 
   # Programs natively supported by home-manager.

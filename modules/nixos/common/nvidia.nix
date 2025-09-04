@@ -1,5 +1,6 @@
 { pkgs, ... }:
 {
+  
   boot.kernelParams = [
     "nvidia-drm.modeset=1" # Enables kernel modesetting for the proprietary NVIDIA driver.
     "nouveau.modeset=0" # Disables modesetting for the open-source Nouveau driver, preventing conflicts with proprietary NVIDIA drivers.

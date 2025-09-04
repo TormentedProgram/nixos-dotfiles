@@ -1,5 +1,9 @@
 { config, ... }:
 {
+  home.packages = with pkgs; [
+    gittyup
+  ];
+
   home.shellAliases = {
     g = "git";
     lg = "lazygit";
